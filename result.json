@@ -1,0 +1,25 @@
+{
+  "result" : [ {
+    "age" : {
+      "probability" : 0.5256485939025879,
+      "high" : 32,
+      "low" : 25
+    },
+    "gender" : {
+      "probability" : 1.0,
+      "value" : "male"
+    },
+    "box" : {
+      "probability" : 0.99476,
+      "x_max" : 596,
+      "y_max" : 502,
+      "x_min" : 548,
+      "y_min" : 460
+    },
+    "subjects" : [ {
+      "subject" : "Bedivierre",
+      "similarity" : 0.9927
+    } ],
+    "landmarks" : [ [ 562, 478 ], [ 576, 474 ], [ 568, 482 ], [ 566, 494 ], [ 578, 492 ] ]
+  } ]
+}
