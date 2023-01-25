@@ -1,34 +1,35 @@
 package org.example;
 
-import com.mysql.cj.jdbc.ConnectionImpl;
 import org.apache.commons.lang3.StringUtils;
-import org.example.cface.EventData;
+import org.example.cface.EventCFData;
 import org.example.cface.request.CFRequest;
 import org.example.cface.response.CFResponse;
-import org.example.cface.response.CFResult;
-import org.example.cface.response.CFSubject;
+import org.example.config.AppConfig;
+import org.example.config.SettingsConnection;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.HashSet;
+import java.util.Scanner;
 
 public class Main {
-    static String host = "172.20.3.231", db="test",user="ivanUser", pwd="Qwerty!@#456";
+//    static String host = "172.20.3.231", db = "test",user = "ivanUser", pwd = "Qwerty!@#456";
     static Connection connection;
     static Connection getConnection() throws SQLException {
-        if(connection == null){
-            String url = "jdbc:mysql://" + host + "/" + db;
-            connection = DriverManager.getConnection(url, user, pwd);
+        //получаем настройки из файла .json
+        SettingsConnection data = AppConfig.getInstance().connection;
+        if (connection == null) {
+            String url = "jdbc:mysql://" + data.host + "/" + data.database;
+            connection = DriverManager.getConnection(url, data.username, data.password);
         }
         return connection;
     }
 
     public static void main(String[] args) {
+        System.out.println("Starting...");
         try {
             ResultSet s = getEvents();
             ArrayList<Integer> ids = new ArrayList<>();
@@ -37,8 +38,8 @@ public class Main {
             s.close();
 
             String idsText = StringUtils.join(ids, ',');
-            getConnection().createStatement()
-                    .execute("UPDATE event SET processing=1 WHERE id in (" + idsText + ");");
+            getConnection().createStatement().execute(
+                    "UPDATE event SET processing=1 WHERE id in (" + idsText + ");");
             for (int id : ids)
                 processEvent(id);
 
@@ -51,46 +52,57 @@ public class Main {
             e.printStackTrace();
         }
 
+        //задержка консоли после выполнение программы
+/*        System.out.println("App closing, press Enter to close...");
+        Scanner sc = new Scanner(System.in);
+        sc.nextLine();
+
+        System.exit(0);*/
     }
 
+    //проверяем кадры события CompreFace'ом
     public static void processEvent(int eventId) throws SQLException {
         Statement stmt = getConnection().createStatement();
 
-        ResultSet images = stmt.executeQuery("SELECT * FROM eventImages WHERE event_id=" + eventId + " LIMIT 10");
-        ArrayList<EventData> eDataList = new ArrayList<>();
-        //TODO: поле data отсутствует!!!!!!!!!! создавать его с параметром mediumtext нельзя!!!!!!!!!!
-//        PreparedStatement updater = getConnection().prepareStatement("UPDATE eventImages SET data=? where id=?");
+        ResultSet images = stmt.executeQuery(
+                "SELECT * FROM eventImages WHERE event_id=" + eventId
+//                        + " LIMIT 10"
+        );
         CFResponse resp = new CFResponse();
+        EventCFData eventCFData = new EventCFData();
         while (images.next()) {
             int imageId = images.getInt("id");
-//            if(imageId < 18000)
-//                continue;
+
             resp = CFRequest.send(images.getString("image"));
             if (resp.result.size() == 0) {
-                System.out.println("Face not found in image #" + imageId + " from event #" + eventId + "!");
+//                System.out.println("Face not found in image #" + imageId + " from event #" + eventId + "!");
                 continue;
             }
-            EventData ed = new EventData(resp);
-            ed.data.faces_count = resp.result.size();
-            String json = ed.toJson();
-//            updater.setString(1,json);
-//            updater.setInt(1,imageId);
-            //количество изменённых строк
-//            int rows = updater.executeUpdate();
-            System.out.println("Image #" + imageId + " from event #" + eventId
-                    + " updated! Faces found: " + resp.result.size());
+            eventCFData.responses.put(imageId, resp);
+            eventCFData.maxFaces = Math.max(eventCFData.maxFaces, resp.result.size());
         }
-        //TODO: тестово возвращаем значение в "0", должно быть "2"
-        getConnection().createStatement().execute(
-                "UPDATE event SET processing=0 WHERE id=" + eventId);
+        if (eventCFData.maxFaces > 0) {
+            System.out.println("Event #" + eventId + ". Faces found: up to " + eventCFData.maxFaces
+                    + " on " + eventCFData.responses.size() + " images.");
+        } else
+            System.out.println("Event #" + eventId + ". Faces not found.");
 
-        HashSet<String> names = new HashSet<String>();
+        String json = eventCFData.toJson();
+        //TODO: тестово возвращаем значение processing в "0", должно быть "2"
+        PreparedStatement updateEventStmt = getConnection().prepareStatement(
+                "UPDATE event SET processing=2, data=? WHERE id=?;");
+        updateEventStmt.setString(1, json);
+        updateEventStmt.setInt(2, eventId);
+        updateEventStmt.execute();
+
+/*        //получаем список неповторяющихся имён
+        names.clear();
         for (CFResult result : resp.result) {
             for (CFSubject subject : result.subjects) {
                 names.add(subject.subject);
             }
         }
-        System.out.println(Arrays.toString(names.toArray()));
+        System.out.println(names.toArray().length > 0 ? Arrays.toString(names.toArray()) : "0 faces found");*/
     }
 
     public static ResultSet getEvents() throws SQLException {
