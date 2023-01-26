@@ -67,26 +67,34 @@ public class Main {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         System.out.println( "[" + df.format(new Date()) +  "] Event #" + eventId + ". Starting...");
         Statement stmt = getConnection().createStatement();
-
-        ResultSet images = stmt.executeQuery(
-                "SELECT * FROM eventImages WHERE event_id=" + eventId
-//                        + " LIMIT 10"
-        );
+        boolean end = false;
+        int offset = 0;
+        int limit = 10;
         CFResponse resp = new CFResponse();
         EventCFData eventCFData = new EventCFData();
         int counter = 0;
-        while (images.next()) {
-            counter++;
-            int imageId = images.getInt("id");
+        while(true){
+            ResultSet images = stmt.executeQuery(
+                    "SELECT * FROM eventImages WHERE event_id=" + eventId
+                         + " LIMIT " + limit + " OFFSET " + offset
+            );
+            offset += limit;
+            if(!images.next())
+                break;
+            do {
+                counter++;
+                int imageId = images.getInt("id");
 
-            resp = CFRequest.send(images.getString("image"));
-            if (resp.result.size() == 0) {
+                resp = CFRequest.send(images.getString("image"));
+                if (resp.result.size() == 0) {
 //                System.out.println("Face not found in image #" + imageId + " from event #" + eventId + "!");
-                continue;
-            }
-            eventCFData.responses.put(imageId, resp);
-            eventCFData.maxFaces = Math.max(eventCFData.maxFaces, resp.result.size());
+                    continue;
+                }
+                eventCFData.responses.put(imageId, resp);
+                eventCFData.maxFaces = Math.max(eventCFData.maxFaces, resp.result.size());
+            } while(images.next());
         }
+
         if (eventCFData.maxFaces > 0) {
             System.out.println("[" + df.format(new Date()) +  "] Event #" + eventId + ". Faces found: up to " + eventCFData.maxFaces
                     + " on " + eventCFData.responses.size() + " images out of " + counter + ".");
