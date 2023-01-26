@@ -9,6 +9,7 @@
     "host": "http://172.20.3.231",
     "apiKey": "5e8198f5-d1e1-4ba0-be24-d8b8db15b001",
     "plugins": "landmarks,gender,age",
-    "port": 8000
+    "port": 8000,
+    "recordedEventCount": 5
   }
 }

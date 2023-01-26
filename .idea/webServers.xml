@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="b25b4ebb-29d0-4888-9424-ccf327ecf1d3" name="172.20.3.231">
+        <fileTransfer rootFolder="/var/detector/dnew" accessType="SFTP" host="172.20.3.231" port="1725" sshConfigId="2c7519d4-f1f1-46b0-8cb3-82676350a426" sshConfig="bedivierre@172.20.3.231:1725 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="530986e1-7ea2-4f4f-8061-1359235c7845" name="3.233">
+        <fileTransfer rootFolder="/var/detector" accessType="SFTP" host="172.20.3.233" port="1725" sshConfigId="816529a9-8723-419a-8c08-81b3e6a13d86" sshConfig="bedivierre@172.20.3.233:1725 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

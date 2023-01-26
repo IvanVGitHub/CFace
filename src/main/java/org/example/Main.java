@@ -11,9 +11,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.sql.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Scanner;
+import java.util.Date;
 
 public class Main {
 //    static String host = "172.20.3.231", db = "test",user = "ivanUser", pwd = "Qwerty!@#456";
@@ -62,6 +64,8 @@ public class Main {
 
     //проверяем кадры события CompreFace'ом
     public static void processEvent(int eventId) throws SQLException {
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        System.out.println( "[" + df.format(new Date()) +  "] Event #" + eventId + ". Starting...");
         Statement stmt = getConnection().createStatement();
 
         ResultSet images = stmt.executeQuery(
@@ -70,7 +74,9 @@ public class Main {
         );
         CFResponse resp = new CFResponse();
         EventCFData eventCFData = new EventCFData();
+        int counter = 0;
         while (images.next()) {
+            counter++;
             int imageId = images.getInt("id");
 
             resp = CFRequest.send(images.getString("image"));
@@ -82,10 +88,10 @@ public class Main {
             eventCFData.maxFaces = Math.max(eventCFData.maxFaces, resp.result.size());
         }
         if (eventCFData.maxFaces > 0) {
-            System.out.println("Event #" + eventId + ". Faces found: up to " + eventCFData.maxFaces
-                    + " on " + eventCFData.responses.size() + " images.");
+            System.out.println("[" + df.format(new Date()) +  "] Event #" + eventId + ". Faces found: up to " + eventCFData.maxFaces
+                    + " on " + eventCFData.responses.size() + " images out of " + counter + ".");
         } else
-            System.out.println("Event #" + eventId + ". Faces not found.");
+            System.out.println("[" + df.format(new Date()) +  "] Event #" + eventId + ". No faces found in " + counter +" images.");
 
         String json = eventCFData.toJson();
         //TODO: тестово возвращаем значение processing в "0", должно быть "2"
@@ -106,9 +112,12 @@ public class Main {
     }
 
     public static ResultSet getEvents() throws SQLException {
+        int limit = AppConfig.getInstance().compreface.recordedEventCount;
+        if( limit <= 0)
+            limit = 5;
         return getConnection().createStatement().executeQuery(
                 "SELECT id FROM event WHERE (processing is null or processing=0) " +
-                        "and exists(SELECT id from eventImages where event_id=event.id LIMIT 1) LIMIT 5;");
+                        "and exists(SELECT id from eventImages where event_id=event.id LIMIT 1) order by id desc LIMIT "+limit+";");
     }
 
     private static String encodeFileToBase64(String filename) {
